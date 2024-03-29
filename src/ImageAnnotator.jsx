@@ -54,7 +54,7 @@ export default class ImageAnnotator extends Component  {
     this.forwardEvent('clickAnnotation','onClickAnnotation');
     this.forwardEvent('mouseEnterAnnotation', 'onMouseEnterAnnotation');
     this.forwardEvent('mouseLeaveAnnotation','onMouseLeaveAnnotation');
-  
+
     // Escape cancels editing
     document.addEventListener('keyup', this.onKeyUp);
   }
@@ -73,7 +73,7 @@ export default class ImageAnnotator extends Component  {
   onKeyUp = evt => {
     if (evt.which === 27) { // Escape
       this.annotationLayer.stopDrawing();
-      
+
       const { selectedAnnotation } = this.state;
       if (selectedAnnotation) {
         this.cancelSelected();
@@ -96,11 +96,11 @@ export default class ImageAnnotator extends Component  {
   }
 
   handleStartSelect = pt =>
-    this.props.onSelectionStarted(pt);
+      this.props.onSelectionStarted(pt);
 
   handleSelect = (evt, skipEvent) => {
     this.state.editorDisabled ?
-      this.onHeadlessSelect(evt, skipEvent) : this.onNormalSelect(evt, skipEvent);
+        this.onHeadlessSelect(evt, skipEvent) : this.onNormalSelect(evt, skipEvent);
   }
 
   /** Selection when editorDisabled == false **/
@@ -139,7 +139,7 @@ export default class ImageAnnotator extends Component  {
         this.clearState(() => {
           this.props.onCancelSelected(selectedAnnotation.clone());
           select(() =>
-            this.props.onChangeSelected(annotation.clone(), selectedAnnotation.clone()));
+              this.props.onChangeSelected(annotation.clone(), selectedAnnotation.clone()));
         });
       } else {
         select();
@@ -147,10 +147,12 @@ export default class ImageAnnotator extends Component  {
     } else {
       const { selectedAnnotation } = this.state;
 
-      if (selectedAnnotation)
+      if (selectedAnnotation){
+        this.saveSelected();
         this.clearState(() => {
           this.props.onCancelSelected(selectedAnnotation);
         });
+      }
       else
         this.clearState();
     }
@@ -208,7 +210,7 @@ export default class ImageAnnotator extends Component  {
     let a = annotation.isSelection ? annotation.toAnnotation() : annotation;
 
     a = (this.state.modifiedTarget) ?
-      a.clone({ target: this.state.modifiedTarget }) : a.clone();
+        a.clone({ target: this.state.modifiedTarget }) : a.clone();
 
     this.clearState(() => {
       this.annotationLayer.deselect();
@@ -241,10 +243,10 @@ export default class ImageAnnotator extends Component  {
   /****************/
 
   addAnnotation = annotation =>
-    this.annotationLayer.addOrUpdateAnnotation(annotation.clone());
+      this.annotationLayer.addOrUpdateAnnotation(annotation.clone());
 
   addDrawingTool = plugin =>
-    this.annotationLayer.addDrawingTool(plugin);
+      this.annotationLayer.addDrawingTool(plugin);
 
   /** Cancel is an async op, return promise **/
   cancelSelected = () => new Promise(resolve => {
@@ -253,7 +255,7 @@ export default class ImageAnnotator extends Component  {
     if (this.state.selectedAnnotation) {
       // Clear state and resolve afterwards
       this.clearState(resolve);
-    } else { 
+    } else {
       // Nothing to clear - resolve now
       resolve();
     }
@@ -285,10 +287,10 @@ export default class ImageAnnotator extends Component  {
   }
 
   getAnnotationById = annotationId =>
-    this.annotationLayer.findShape(annotationId)?.annotation;
+      this.annotationLayer.findShape(annotationId)?.annotation;
 
   getAnnotations = () =>
-    this.annotationLayer.getAnnotations().map(a => a.clone());
+      this.annotationLayer.getAnnotations().map(a => a.clone());
 
   getImageSnippetById = annotationId => {
     const shape = this.annotationLayer.findShape(annotationId);
@@ -299,16 +301,16 @@ export default class ImageAnnotator extends Component  {
   getSelected = () => {
     if (this.state.selectedAnnotation) {
       return this.state.editorDisabled ?
-        this.state.selectedAnnotation :
-        this._editor.current?.getCurrentAnnotation();
+          this.state.selectedAnnotation :
+          this._editor.current?.getCurrentAnnotation();
     }
   }
 
   getSelectedImageSnippet = () =>
-    this.annotationLayer.getSelectedImageSnippet();
+      this.annotationLayer.getSelectedImageSnippet();
 
   listDrawingTools = () =>
-    this.annotationLayer.listDrawingTools();
+      this.annotationLayer.listDrawingTools();
 
   get readOnly() {
     return this.state.readOnly;
@@ -326,41 +328,41 @@ export default class ImageAnnotator extends Component  {
   }
 
   removeDrawingTool = id =>
-    this.annotationLayer.removeDrawingTool(id);
+      this.annotationLayer.removeDrawingTool(id);
 
   saveSelected = () =>
-    new Promise(resolve => {
-      const a = this.state.selectedAnnotation;
+      new Promise(resolve => {
+        const a = this.state.selectedAnnotation;
 
-      if (a) {
-        if (this._editor.current) {
-          this._editor.current.onOk();
-          resolve();
-        } else if (a.isSelection) {
-          if (a.bodies.length > 0 || this.props.config.allowEmpty) {
-            this.onCreateOrUpdateAnnotation('onAnnotationCreated', resolve)(a);
-          } else {
-            this.annotationLayer.deselect();
+        if (a) {
+          if (this._editor.current) {
+            this._editor.current.onOk();
             resolve();
+          } else if (a.isSelection) {
+            if (a.bodies.length > 0 || this.props.config.allowEmpty) {
+              this.onCreateOrUpdateAnnotation('onAnnotationCreated', resolve)(a);
+            } else {
+              this.annotationLayer.deselect();
+              resolve();
+            }
+          } else {
+            // Headless update?
+            const { beforeHeadlessModify, modifiedTarget } = this.state;
+
+            if (beforeHeadlessModify) {
+              // Annotation was modified using '.updateSelected()'
+              this.onCreateOrUpdateAnnotation('onAnnotationUpdated', resolve)(a, beforeHeadlessModify);
+            } else if (modifiedTarget) {
+              // Target was modified, but otherwise no change
+              this.onCreateOrUpdateAnnotation('onAnnotationUpdated', resolve)(a, a);
+            } else {
+              this.onCancelAnnotation(a, resolve);
+            }
           }
         } else {
-          // Headless update?
-          const { beforeHeadlessModify, modifiedTarget } = this.state;
-
-          if (beforeHeadlessModify) {
-            // Annotation was modified using '.updateSelected()'
-            this.onCreateOrUpdateAnnotation('onAnnotationUpdated', resolve)(a, beforeHeadlessModify);
-          } else if (modifiedTarget) {
-            // Target was modified, but otherwise no change
-            this.onCreateOrUpdateAnnotation('onAnnotationUpdated', resolve)(a, a);
-          } else {
-            this.onCancelAnnotation(a, resolve);
-          }
+          resolve();
         }
-      } else {
-        resolve();
-      }
-    });
+      });
 
   selectAnnotation = arg => {
     const selected = this.annotationLayer.selectAnnotation(arg, true);
@@ -374,10 +376,10 @@ export default class ImageAnnotator extends Component  {
   }
 
   setAnnotations = annotations =>
-    this.annotationLayer.init(annotations.map(a => a.clone()));
+      this.annotationLayer.init(annotations.map(a => a.clone()));
 
   setDrawingTool = shape =>
-    this.annotationLayer.setDrawingTool(shape);
+      this.annotationLayer.setDrawingTool(shape);
 
   setVisible = visible => {
     this.annotationLayer.setVisible(visible);
@@ -387,22 +389,22 @@ export default class ImageAnnotator extends Component  {
   }
 
   updateSelected = (annotation, saveImmediately) =>
-    new Promise(resolve => {
-      if (this.state.selectedAnnotation) {
-        if (saveImmediately) {
-          if (this.state.selectedAnnotation.isSelection) {
-            this.onCreateOrUpdateAnnotation('onAnnotationCreated', resolve)(annotation);
+      new Promise(resolve => {
+        if (this.state.selectedAnnotation) {
+          if (saveImmediately) {
+            if (this.state.selectedAnnotation.isSelection) {
+              this.onCreateOrUpdateAnnotation('onAnnotationCreated', resolve)(annotation);
+            } else {
+              this.onCreateOrUpdateAnnotation('onAnnotationUpdated', resolve)(annotation, this.state.selectedAnnotation);
+            }
           } else {
-            this.onCreateOrUpdateAnnotation('onAnnotationUpdated', resolve)(annotation, this.state.selectedAnnotation);
+            this.setState({
+              selectedAnnotation: annotation, // Updated annotation
+              beforeHeadlessModify: this.state.beforeHeadlessModify || this.state.selectedAnnotation
+            }, resolve);
           }
-        } else {
-          this.setState({
-            selectedAnnotation: annotation, // Updated annotation
-            beforeHeadlessModify: this.state.beforeHeadlessModify || this.state.selectedAnnotation
-          }, resolve);
         }
-      }
-    });
+      });
 
   get widgets() {
     return this.state.widgets;
@@ -419,21 +421,21 @@ export default class ImageAnnotator extends Component  {
     const readOnly = this.state.readOnly || this.state.selectedAnnotation?.readOnly;
 
     return (open && (
-      <Editor
-        ref={this._editor}
-        detachable
-        wrapperEl={this.props.wrapperEl}
-        annotation={this.state.selectedAnnotation}
-        modifiedTarget={this.state.modifiedTarget}
-        selectedElement={this.state.selectedDOMElement}
-        readOnly={readOnly}
-        allowEmpty={this.props.config.allowEmpty}
-        widgets={this.state.widgets}
-        env={this.props.env}
-        onAnnotationCreated={this.onCreateOrUpdateAnnotation('onAnnotationCreated')}
-        onAnnotationUpdated={this.onCreateOrUpdateAnnotation('onAnnotationUpdated')}
-        onAnnotationDeleted={this.onDeleteAnnotation}
-        onCancel={this.onCancelAnnotation} />
+        <Editor
+            ref={this._editor}
+            detachable
+            wrapperEl={this.props.wrapperEl}
+            annotation={this.state.selectedAnnotation}
+            modifiedTarget={this.state.modifiedTarget}
+            selectedElement={this.state.selectedDOMElement}
+            readOnly={readOnly}
+            allowEmpty={this.props.config.allowEmpty}
+            widgets={this.state.widgets}
+            env={this.props.env}
+            onAnnotationCreated={this.onCreateOrUpdateAnnotation('onAnnotationCreated')}
+            onAnnotationUpdated={this.onCreateOrUpdateAnnotation('onAnnotationUpdated')}
+            onAnnotationDeleted={this.onDeleteAnnotation}
+            onCancel={this.onCancelAnnotation} />
     ))
   }
 
